@@ -13,7 +13,9 @@
 #import "KMMovie.h"
 #import "KMMovieDetailsViewController.h"
 
-@interface KMDiscoverListViewController ()
+@interface KMDiscoverListViewController () {
+    int currentPage;
+}
 
 @property (nonatomic, strong) NSMutableArray* dataSource;
 @property (nonatomic, strong) UIRefreshControl* refreshControl;
@@ -49,7 +51,7 @@
     [super viewDidLoad];
     [self setupTableView];
     [self requestMovies];
-	// Do any additional setup after loading the view.
+    // Do any additional setup after loading the view.
 }
 
 - (void)didReceiveMemoryWarning
@@ -63,6 +65,9 @@
 
 - (void)setupTableView
 {
+    currentPage = 0;
+    self.dataSource = [[NSMutableArray alloc] init];
+    
     if (!_refreshControl)
     {
         _refreshControl = [[UIRefreshControl alloc] initWithFrame:CGRectMake(0, -44, 320, 44)];
@@ -93,6 +98,8 @@
 
 - (void)requestMovies
 {
+    currentPage++;
+    
     KMDiscoverListCompletionBlock completionBlock = ^(NSArray* data, NSString* errorString)
     {
         [self.refreshControl endRefreshing];
@@ -102,7 +109,7 @@
             [self.networkLoadingViewController showErrorView];
     };
     KMDiscoverSource* source = [KMDiscoverSource discoverSource];
-    [source getDiscoverList:@"1" completion:completionBlock];
+    [source getDiscoverList:[@(currentPage) stringValue] completion:completionBlock];
 }
 
 #pragma mark -
@@ -115,9 +122,10 @@
     else
     {
         [self hideLoadingView];
-        if (!self.dataSource)
-            self.dataSource = [[NSMutableArray alloc] init];
-        self.dataSource = [NSMutableArray arrayWithArray:data];
+        //        if (!self.dataSource)
+        //            self.dataSource = [[NSMutableArray alloc] init];
+        //        self.dataSource = [NSMutableArray arrayWithArray:data];
+        [self.dataSource addObjectsFromArray:data];
         [self.tableView reloadData];
     }
 }
@@ -147,6 +155,8 @@
     return cell;
 }
 
+
+
 #pragma mark -
 #pragma mark UITableViewDelegate
 
@@ -156,6 +166,16 @@
     [self.navigationController pushViewController:viewController animated:YES];
     viewController.movieDetails = [self.dataSource objectAtIndex:indexPath.row];
 }
+
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (currentPage < 101) {
+        if (indexPath.row == currentPage*20 - 1) {
+            NSLog(@"Quang .. %d", indexPath.row);
+            [self requestMovies];
+        }
+    }
+}
+
 
 #pragma mark -
 #pragma mark KMNetworkLoadingViewController Methods
